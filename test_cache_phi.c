@@ -23,12 +23,12 @@ int block_size;
 int cache_size;
 int num_sets;
 int extra_value;
-int memsize;
+int memory_size;
 char *mem;
 
 // functions
 
-void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cacheSize);
+void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cacheSize, int memSize);
 int test_access(int phi[], size_t size, int n_samples);
 	
 int main(int argc, char **argv)
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 	int hits[10];
 	int i;
 	
-	hwquery(access_test,hits,10,8,64,32768);
+	hwquery(access_test,hits,10,8,64,32768,7769736);
 	
 	for(i = 0; i < 10; i++){
 		printf(" Vector query: %i - Hit or Miss: %i \n",access_test[i],hits[i]);
@@ -49,13 +49,14 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cacheSize){
+void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cacheSize, int memSize){
 	
 	int i, step;
 	
 	associativity = assoc;
 	block_size = blocksz;
 	cache_size = cacheSize;
+	memory_size = memSize;
 	
 	int highest_value = 0;
 	
@@ -67,14 +68,12 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
 	
 	extra_value = highest_value + 1;
 	
-
 	//********************************************************
 	//	setting mem for acces to the cache
 	//********************************************************	
 	
 	num_sets = cache_size/(block_size*associativity);
-	memsize = ; //
-
+	
 	mem = malloc((extra_value+associativity+1)*block_size*num_sets); //sizeof(*mem)
 	
 	if (NULL == mem) {
@@ -83,7 +82,7 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
     }
 	
 	
-	for(i=0;i < memsize;i++){
+	for(i=0;i < memory_size;i++){
 		
 		mem[i] = i;
 		
