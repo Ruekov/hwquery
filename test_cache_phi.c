@@ -31,49 +31,86 @@
 		}\
 		printf(" \n"); \
 		}
+		
+#define PRINT_REQ {\
+		printf("[");\
+		for(i=0; i < size; i++){ \
+		printf(" %i ",hits[i]); \
+		}\
+		printf("]\n"); \
+		}
+
+#define PRINT_RES {\
+		printf("[");\
+		for(i=0; i < size; i++){ \
+		printf(" %i ",access_test[i]); \
+		}\
+		printf("]\n"); \
+		}
 
 // global variables
 
-int associativity;
-int block_size;
-int cache_size;
-int num_sets;
-int extra_value;
+
 unsigned char *mem = NULL;
 int memory_size;
 
 // functions
 
 void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cacheSize, int memorySize);
-int test_access(int phi[], size_t size, int n_samples);
+int test_access(int phi[], size_t size, int n_samples, int numsets, int blocksz, int extra_value);
 	
 int main(int argc, char **argv)
 {
 	
-	int access_test[10] = {1,0,0,0,1,4,5,6,7,8};
-	int hits[10];
-	int i;
-	
-	hwquery(access_test,hits,10,8,64,32768,7769736);
-	
-	for(i = 0; i < 10; i++){
-		printf(" Vector query: %i - Hit or Miss: %i \n",access_test[i],hits[i]);
+	if(argc < 6){
+		
+		printf("Arguments missing");
+		return 0;
 		
 		}
-		
 	
+	int assoc      = atoi(argv[1]);
+	int blocksz    = atoi(argv[2]);
+	int cacheSize  = atoi(argv[3]);
+	int memorySize = atoi(argv[4]);
+	int size       = atoi(argv[5]);
+	
+	int i;
+	int access_test[size];
+	
+	for(i=0;i < size;i++){
+		
+		access_test[i] = atoi(argv[i+6]);
+		
+		}
+	
+	int hits[size];
+	
+	hwquery(access_test,hits,size,assoc,blocksz,cacheSize,memorySize);
+	
+	printf("\n");
+	
+	//for(i = 0; i < 10; i++){
+	//	printf("Vector query: %i - Hit or Miss: %i \n",access_test[i],hits[i]);	
+	//	}
+	
+	
+	PRINT_RES;
+	PRINT_REQ;
 	
 	return 0;
 }
 
 void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cacheSize, int memorySize){
 	
-	int i, step, memory_size;
+	int i, step;
 	
-	associativity = assoc;
-	block_size = blocksz;
-	cache_size = cacheSize;
-	memory_size = memorySize;
+	int associativity = assoc;
+	int block_size = blocksz;
+	int cache_size = cacheSize;
+	int memory_size = memorySize;
+	int num_sets;
+	int extra_value;
 	
 	int highest_value = 0;
 	
@@ -90,7 +127,7 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
 	//	setting mem for acces to the cache
 	//********************************************************	
 	
-	num_sets = cache_size/(block_size*associativity); 
+	num_sets = cache_size/(block_size*associativity);
 
 	mem = malloc(memory_size); //sizeof(*mem) //(extra_value+associativity+1)*block_size*num_sets;
 	
@@ -108,7 +145,7 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
 	for (step = 2; step <= size; step++){
 
 		//********************************************************
-		//	phi_hit ()
+		//	setting phi_hit
 		//********************************************************
 		
 		int phi_hit[step];
@@ -120,7 +157,7 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
 		phi_hit[step-1] = phi_hit[step-2];
 
 		//********************************************************
-		//	phi_miss
+		//	setting phi_miss
 		//********************************************************
 
 		int phi_miss[step];
@@ -149,17 +186,17 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
 		int rphi_miss = 0;
 		int rphi_test = 0;
 		
-		printf("TEST Phi_HIT (step: %d): ",step);
+		printf(" TEST Phi_HIT (step: %d): ",step);
 		
-		rphi_hit  = test_access(phi_hit, step, samples);
+		rphi_hit  = test_access(phi_hit, step, samples, num_sets, block_size, extra_value);
 		
 		printf("TEST Phi_MISS (step: %d): ",step);
 		
-		rphi_miss = test_access(phi_miss, step, samples);
+		rphi_miss = test_access(phi_miss, step, samples, num_sets, block_size, extra_value);
 		
 		printf("TEST Phi_TEST (step: %d): ",step);
 		
-		rphi_test = test_access(phi_test, step, samples);
+		rphi_test = test_access(phi_test, step, samples, num_sets, block_size, extra_value);
 			
 		//********************************************************
 		//	Is it a hit/miss?
@@ -179,21 +216,23 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
 	
 	}
 	
-	PRINT_CACHE_N;
+	//PRINT_CACHE_N;
 	
 	free(mem);
 	mem = NULL;
 	
 }
 
-int test_access(int phi[], size_t size, int n_samples){
+int test_access(int phi[], size_t size, int n_samples, int numsets, int blocksz, int extra_value){
 	
 	initialize_papi(PAPI_L1_DCM);
 	
 	register int num_miss = 0;
-	register int x = 0;
+	register char x = 0;
 	register int i; 
 	register int j;
+	register int num_sets = numsets;
+	register int block_size = blocksz;
 	
 	SHOW_PHI;
 
@@ -206,15 +245,19 @@ int test_access(int phi[], size_t size, int n_samples){
 		start_papi();	// start miss counter
 		
 		for (i = 0; i < size; i++){
+			
 			x += mem[(phi[i])*num_sets*block_size];
+			
 			}
+			
 		num_miss = num_miss + stop_papi(); 	// stop miss counter
 		
 		/* END CRITICAL LOOP */
 		
 	}		
 	
-	printf(" ACCESS X: %d  NUM MISS: %d \n",x, num_miss);
+	printf(" ",x);
+	//printf(" ACCESS X: %d  NUM MISS: %d \n",x, num_miss);
 
 	return num_miss;
 	
