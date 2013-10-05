@@ -10,16 +10,23 @@
 #include <papif.h>
 
 #define samples 100000
+
+
+#define CLEAN_MAINMEMORY_N {\
+	for(i=0;i < memory_size;i++){ \
+	mem[i] = 10000+i; \
+	}\
+	}
 			
 #define CLEAN_CACHE_N {\
-		for(i=0;i < extra_value-1;i++){ \
+		for(i=0;i < num_sets-1;i++){ \
 		mem[i*num_sets*block_size] = extra_value+1+i; \
 		}\
 		}
 
 #define PRINT_CACHE_N {\
 		printf("Vector phi_clear: "); \
-		for(i=0;i < extra_value-1;i++){ \
+		for(i=0;i < num_sets-1;i++){ \
 		printf(" %d ",mem[i*num_sets*block_size]); \
 		}\
 		printf("\n"); \
@@ -136,11 +143,14 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
 		exit(0);
     }
     
+    //CLEAN_MAINMEMORY_N;
     CLEAN_CACHE_N;
 	
 	// first element is always a miss
 	
 	hit[0] = 0;
+	
+	printf(" 1 => MISS \n");
 	
 	for (step = 2; step <= size; step++){
 
@@ -216,7 +226,7 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
 	
 	}
 	
-	//PRINT_CACHE_N;
+	PRINT_CACHE_N;
 	
 	free(mem);
 	mem = NULL;
@@ -227,8 +237,8 @@ int test_access(int phi[], size_t size, int n_samples, int numsets, int blocksz,
 	
 	initialize_papi(PAPI_L1_DCM);
 	
-	register int num_miss = 0;
-	register char x = 0;
+	int num_miss = 0;
+	register int x = 0;
 	register int i; 
 	register int j;
 	register int num_sets = numsets;
