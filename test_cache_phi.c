@@ -9,7 +9,7 @@
 #include <malloc.h>
 #include <papif.h>
 
-#define samples 100000
+#define samples 1000000
 
 
 #define CLEAN_MAINMEMORY_N {\
@@ -20,14 +20,14 @@
 			
 #define CLEAN_CACHE_N {\
 		for(i=0;i < num_sets-1;i++){ \
-		mem[i*num_sets*block_size] = extra_value+1+i; \
+		mem[(i*num_sets+1)*block_size] = extra_value+1+i; \
 		}\
 		}
 
 #define PRINT_CACHE_N {\
 		printf("Vector phi_clear: "); \
 		for(i=0;i < num_sets-1;i++){ \
-		printf(" %d ",mem[i*num_sets*block_size]); \
+		printf(" %d ",mem[(i*num_sets+1)*block_size]); \
 		}\
 		printf("\n"); \
 		}
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 	
 	if(argc < 6){
 		
-		printf("Arguments missing");
+		printf("Arguments missing: \nassociativity block_size cache_size memory_size size_word w1 ... wN \n");
 		return 0;
 		
 		}
@@ -226,7 +226,7 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
 	
 	}
 	
-	PRINT_CACHE_N;
+	//PRINT_CACHE_N;
 	
 	free(mem);
 	mem = NULL;
@@ -256,7 +256,7 @@ int test_access(int phi[], size_t size, int n_samples, int numsets, int blocksz,
 		
 		for (i = 0; i < size; i++){
 			
-			x += mem[(phi[i])*num_sets*block_size];
+			x += mem[(phi[i]*num_sets+1)*block_size];
 			
 			}
 			
