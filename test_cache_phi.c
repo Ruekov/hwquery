@@ -8,8 +8,9 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <papif.h>
+#include <tgmath.h>
 
-#define samples 1000000
+#define samples 10000000
 
 
 #define CLEAN_MAINMEMORY_N {\
@@ -20,14 +21,14 @@
 			
 #define CLEAN_CACHE_N {\
 		for(i=0;i < num_sets-1;i++){ \
-		mem[(i*num_sets+1)*block_size] = extra_value+1+i; \
+		mem[i<<offset<<index] = extra_value+1+i; \
 		}\
 		}
 
 #define PRINT_CACHE_N {\
 		printf("Vector phi_clear: "); \
 		for(i=0;i < num_sets-1;i++){ \
-		printf(" %d ",mem[(i*num_sets+1)*block_size]); \
+		printf(" %d ",mem[i*block_size<<offset<<num_sets]); \
 		}\
 		printf("\n"); \
 		}
@@ -58,7 +59,7 @@
 // global variables
 
 
-unsigned char *mem = NULL;
+unsigned int *mem = NULL;
 int memory_size;
 
 // functions
@@ -135,6 +136,8 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
 	//********************************************************	
 	
 	num_sets = cache_size/(block_size*associativity);
+	//int offset = log2(block_size);
+	//int index = log2(num_sets);
 
 	mem = malloc(memory_size); //sizeof(*mem) //(extra_value+associativity+1)*block_size*num_sets;
 	
@@ -144,7 +147,7 @@ void hwquery(int addr[], int hit[], size_t size, int assoc, int blocksz, int cac
     }
     
     //CLEAN_MAINMEMORY_N;
-    CLEAN_CACHE_N;
+    //CLEAN_CACHE_N;
 	
 	// first element is always a miss
 	
@@ -238,15 +241,20 @@ int test_access(int phi[], size_t size, int n_samples, int numsets, int blocksz,
 	initialize_papi(PAPI_L1_DCM);
 	
 	int num_miss = 0;
-	register int x = 0;
+	register unsigned long long int x = 0;
 	register int i; 
 	register int j;
-	register int num_sets = numsets;
-	register int block_size = blocksz;
+	register int k;
+	int num_sets = numsets;
+	int block_size = blocksz;
+	register int offset = log2(block_size);
+	register int index = log2(num_sets);
 	
 	SHOW_PHI;
 
 	for ( j = 0; j < n_samples; j++){
+
+		x = 0;
 		
 		CLEAN_CACHE_N;
 
@@ -255,9 +263,7 @@ int test_access(int phi[], size_t size, int n_samples, int numsets, int blocksz,
 		start_papi();	// start miss counter
 		
 		for (i = 0; i < size; i++){
-			
-			x += mem[(phi[i]*num_sets+1)*block_size];
-			
+				x += mem[phi[i]<<offset<<index];
 			}
 			
 		num_miss = num_miss + stop_papi(); 	// stop miss counter
